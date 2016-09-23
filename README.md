@@ -227,7 +227,6 @@ Therefore it needs to be absolutly clear how FormHandler displays strings and wh
 
 This means that button values are thus also not escaped, as they cannot be filled from the `$_GET` or `$_POST`.
 
-
 Rendering
 ------
 FormHandler tries to limit it's functionality to what it should do: handle forms. However, displaying the forms is 
@@ -241,13 +240,113 @@ are always elements which are related:
   * Displaying if the field is required or not
 
 FormHandler tries to not to interfere with the design part of your application. However, it should be clear that 
-its thus inevitable that FormHandler has some responsibility of generating HTML content.
+its inevitable that FormHandler has some responsibility of generating HTML content.
 
 FormHandler comes with a class called a `Renderer`. This class is responsible for rendering the element 
 (field/button/form) and all its related information (error messages, titles, etc).
   
-It's quite easy to create your own class which will render the elements in the way you expect them. 
+Our default Renderer is the `XhtmlRenderer`. This will render each field as an XHTML tag. 
+You can also influence the rendering of titles and error messages, or disable these at all.
+ 
+It's quite easy to create your own class which will render the elements in the way you expect them. For example, 
+if you want to render titles and add a red asterisk (*) near each field, you could extend the `XhtmlRenderer`, override the 
+`render` method and add this logic to it. 
 
-@todo: example here?
+Example:
+
+```
+
+
+```
   
+Validation
+------
+
+One of the most important parts of handling forms is validation. FormHandler comes with a complete set of 
+*Validators* which can be used to validate a field. You can also enter your own method/function/closure which will be 
+used to validate the specific field.
+
+#### Using your own Validator
+
+A simple example with a own validator (closure) is:
+```php
+// Create a new field with a custom validator
+$form->textField('terms')->addValidator(function (TextField $field) {
+    if ($field->getValue() == 'agree') {
+        return true;
+    } else {
+        return 'You have to enter "agree"';
+    }
+});
+```
+
+The same principle also works with function names and methods. Example:
+```php
+// Just a field...
+$field = $form->textField('name');
+
+// Add a function as validator
+$field->addValidator('myFunction');
+
+// Add a static method as validator
+$field->addValidator('myclass::staticMethod');
+
+// Add a method as validator
+$field->addValidator([$object, 'myMethod']);
+```
+#### Using an existing validator
+
+FormHandler comes with a whole list of validators. Per validator you can define if the field should be required or not.
+You can choose from the following validators:
+
+  * CharacterBlacklistValidator - Check if all characters of the value are in the predefined list of characters
+  * CharacterWhitelistValidator - Check that all characters of the value are not in a list of blacklisted characters   
+  * DateValidator - Check if the entered value is a valid date. The input is considered valid if it can be parsed by the PHP function `date_parse`
+  * EmailValidator - Check if the value is a valid email address
+  * EqualsValidator - Check if the value is equal to a given value.
+  * FloatValidator - Check if the value is a valid float. Possible to check for comma, point or both.
+  * ImageUploadValidator - Check if the uploaded file is a valid image. Optional check proportions, aspect ratio, filesize, extension, etc.
+  * IpValidator - Check if the value is a valid ip. Checking for private ranges, ipv6 or reserved ranges is supported.
+  * IsOptionValidator - Check if the value is an existing option.
+  * NumberValidator - Check if the value is a valid number and between optional min and max value.
+  * RadioButtonCheckedValidator - Check if at least one radio button is checked of all radio buttons with the same name.
+  * RegexValidator - Check if the value matches a given regular expression
+  * SameFieldsValidator - Check if two fields have the same value
+  * StringValidator - Check if the given value is a valid string and optionally between min and max length.
+  * UploadValidator - Check if the uploaded field is valid. Check for correct mime type, extension and size are supported. 
+  * UrlValidator - Check if the given value is a valid URL.  
   
+FAQ
+-----
+
+##### How can I check if an element is an field or a button?
+
+You can check if the element is an instanceof `AbstractFormField` or `AbstractFormButton`.
+
+##### The form is never submitted, I tried everything!
+
+You can retrieve the reason why the form is not submitted by giving it an argument `$reason`. This variable will be
+filled with a reason message why FormHandler has decided that the form was not submitted.
+
+Example:
+```php
+// Create a new form
+$form = new Form();
+
+// ... the rest of the form here ...
+
+// When the form was not submitted, this variable is filled with the reason.
+$reason = '';
+
+if ($form->isSubmitted($reason)) {
+    
+    // When the form was marked as valid.
+    if ($form->isValid()) {
+        // valid!
+    } 
+    
+} else {
+    // The form was not submitted. Also display why
+    echo "Form is not submitted. Reason: " . htmlentities( $reason );
+}
+```
